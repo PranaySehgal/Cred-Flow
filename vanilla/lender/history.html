@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repayment History — Lender Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar print-hide" id="lender-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile print-hide" id="lender-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="lender-history-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { lenderApi } from '../js/api.js';
+    import { formatMoney, formatDate } from '../js/format.js';
+
+    const session = requireRole('lender', '../login.html');
+    if (session) {
+      setupNav('lender', 'history');
+      loadHistory();
+    }
+
+    function loadHistory() {
+      const lenderId = session.lenderId || 'l1';
+      const rows = lenderApi.getHistory(lenderId);
+
+      const totalRepaid = rows.reduce((sum, r) => sum + r.repayment, 0);
+      const totalSales = rows.reduce((sum, r) => sum + r.sales, 0);
+
+      const container = document.getElementById('lender-history-content');
+      container.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h1 class="page-title text-2xl">Historical Collections</h1>
+            <p class="page-subtitle">Daily aggregate repayments routed from financed merchants</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="stat-card" style="padding:0.5rem 1rem;">
+              <span class="stat-label">Total Collected:</span>
+              <span class="font-bold text-teal text-base tabular">${formatMoney(totalRepaid)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Active Shops</th>
+                <th>Total Digital Sales</th>
+                <th>Repayment Routed</th>
+                <th>Effective Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(r => `
+                <tr>
+                  <td class="font-semibold tabular text-navy">${formatDate(r.date)}</td>
+                  <td class="tabular">${r.merchants} merchants</td>
+                  <td class="tabular font-medium">${formatMoney(r.sales)}</td>
+                  <td class="tabular font-bold text-teal">+${formatMoney(r.repayment)}</td>
+                  <td class="tabular text-muted">
+                    ${r.sales > 0 ? ((r.repayment / r.sales) * 100).toFixed(1) + '%' : '0%'}
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

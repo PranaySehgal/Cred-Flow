@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Trail Log — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-audit-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatDateTime } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'audit');
+      loadAudit();
+    }
+
+    function loadAudit() {
+      let actionFilter = 'all';
+
+      const container = document.getElementById('admin-audit-content');
+
+      function render() {
+        const rows = adminApi.getAuditLog({ action: actionFilter });
+
+        // Gather unique actions for filter
+        const allRows = adminApi.getAuditLog();
+        const actions = Array.from(new Set(allRows.map(r => r.action)));
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">Audit Trail & Compliance Log</h1>
+              <p class="page-subtitle">Immutable chronological record of platform actions, overrides and approvals</p>
+            </div>
+            <div class="stat-card" style="padding:0.4rem 0.85rem;">
+              <span class="stat-label">Total Recorded:</span>
+              <span class="font-bold tabular text-navy">${rows.length} events</span>
+            </div>
+          </div>
+
+          <!-- Filter -->
+          <div class="card card-content flex items-center gap-3" style="margin-bottom: 1.25rem;">
+            <label for="action-filter" class="form-label" style="margin-bottom:0; white-space:nowrap;">Filter Action:</label>
+            <select id="action-filter" class="form-select" style="max-width:320px;">
+              <option value="all">All Actions (${allRows.length})</option>
+              ${actions.map(act => `<option value="${act}" ${actionFilter === act ? 'selected' : ''}>${act}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Audit Table -->
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Event ID</th>
+                  <th>Timestamp (IST)</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Audit Detail</th>
+                  <th>Source IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `
+                  <tr>
+                    <td colspan="7" class="text-center text-muted" style="padding:2.5rem 1rem;">
+                      No audit records match the selected filter.
+                    </td>
+                  </tr>
+                ` : rows.map(r => `
+                  <tr>
+                    <td class="font-bold tabular text-navy text-xs">${r.id}</td>
+                    <td class="tabular text-xs text-muted" style="white-space:nowrap;">${formatDateTime(r.at)}</td>
+                    <td>
+                      <p class="font-semibold text-xs text-navy">${r.actor}</p>
+                      <p class="text-xs text-muted font-normal">${r.actorRole}</p>
+                    </td>
+                    <td>
+                      <span class="badge ${r.action.includes('Override') ? 'badge-amber' : r.action.includes('resolved') || r.action.includes('approved') ? 'badge-success' : 'badge-navy'}">
+                        ${r.action}
+                      </span>
+                    </td>
+                    <td class="font-semibold tabular text-xs">${r.target}</td>
+                    <td class="text-xs text-ink font-medium" style="max-width: 380px;">${r.detail}</td>
+                    <td class="tabular text-xs text-muted font-mono">${r.ip}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.getElementById('action-filter')?.addEventListener('change', (e) => {
+          actionFilter = e.target.value;
+          render();
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

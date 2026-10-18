@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resolve Dispute — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-dispute-detail-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { disputes } from '../js/seed.js';
+    import { formatMoney, formatDateTime } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'disputes');
+      loadDisputeDetail();
+    }
+
+    function loadDisputeDetail() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const dId = urlParams.get('id') || 'DSP-318';
+      const dispute = disputes.find(d => d.id === dId) || disputes[0];
+
+      const container = document.getElementById('admin-dispute-detail-content');
+      container.innerHTML = `
+        <div class="page-header" style="margin-bottom: 1.25rem;">
+          <div class="flex items-center gap-3">
+            <a href="disputes.html" class="btn btn-outline btn-sm">
+              ${icon('arrowLeft', { size: 14 })} Back
+            </a>
+            <div>
+              <h1 class="page-title text-xl">Resolve Claim: ${dispute.id}</h1>
+              <p class="page-subtitle">${dispute.merchantName} · Agreement ${dispute.agreementId}</p>
+            </div>
+          </div>
+          <span class="badge ${dispute.status === 'open' ? 'badge-amber' : 'badge-success'} text-sm">
+            ${dispute.status.toUpperCase()}
+          </span>
+        </div>
+
+        <div class="grid-2" style="max-width:960px;">
+          <!-- Claim Information -->
+          <div class="card card-content">
+            <h2 class="card-title text-base" style="margin-bottom:1rem;">
+              ${icon('alert', { size: 16 })} Claim Details
+            </h2>
+
+            <div style="display:flex; flex-direction:column; gap:0.6rem;">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Transaction ID:</span>
+                <span class="font-bold tabular text-navy">${dispute.transactionId}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Disputed Repayment:</span>
+                <span class="font-bold tabular text-danger">${formatMoney(dispute.amount)}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Date Filed:</span>
+                <span class="font-semibold text-ink">${formatDateTime(dispute.createdAt)}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Reason Category:</span>
+                <span class="font-semibold text-navy">${dispute.reason}</span>
+              </div>
+            </div>
+
+            <div style="background:var(--color-canvas); padding:0.85rem; border-radius:6px; margin-top:1.25rem;">
+              <p class="stat-label">Merchant Statement</p>
+              <p class="text-xs text-ink" style="margin-top:4px; line-height:1.5;">${dispute.description}</p>
+            </div>
+
+            ${dispute.status === 'resolved' ? `
+              <div class="alert-banner success" style="margin-top:1.25rem;">
+                <div class="alert-banner-body">
+                  <p class="alert-banner-title">Resolved by ${dispute.resolvedBy || 'Ops'}</p>
+                  <p class="alert-banner-text">Decision: <strong>${dispute.resolution}</strong> on ${formatDateTime(dispute.resolvedAt)}</p>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Resolution Action Form -->
+          <div class="card card-content">
+            <h2 class="card-title text-base" style="margin-bottom:1rem;">Mediation Decision</h2>
+
+            ${dispute.status === 'open' ? `
+              <form id="dispute-form">
+                <div class="form-group">
+                  <label class="form-label">Resolution Determination <span class="required">*</span></label>
+                  <select id="dispute-decision" class="form-select" required>
+                    <option value="reverse">Reverse in merchant's favour (Refund deducted share)</option>
+                    <option value="uphold">Uphold lender deduction (Legitimate settlement routing)</option>
+                    <option value="split">Split dispute amount 50/50 between parties</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="dispute-note" class="form-label">Resolution explanation & note <span class="required">*</span></label>
+                  <textarea id="dispute-note" class="form-textarea" placeholder="Explain the investigation and reconciliation result..." required></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-lg">
+                  Confirm and Apply Resolution
+                </button>
+              </form>
+            ` : `
+              <p class="text-sm text-muted">This dispute has already been adjudicated and written to the audit log.</p>
+              <a href="disputes.html" class="btn btn-outline btn-sm" style="margin-top:1rem;">Back to disputes queue</a>
+            `}
+          </div>
+        </div>
+      `;
+
+      document.getElementById('dispute-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const decision = document.getElementById('dispute-decision').value;
+        const note = document.getElementById('dispute-note').value;
+        const splitPercent = decision === 'split' ? 50 : undefined;
+
+        adminApi.resolveDispute(dId, { resolution: decision, splitPercent, note });
+        alert(`Dispute ${dId} resolved! Audit entry recorded.`);
+        loadDisputeDetail();
+      });
+    }
+  </script>
+</body>
+</html>

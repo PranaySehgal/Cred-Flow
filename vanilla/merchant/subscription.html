@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription — Merchant Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div id="merchant-header"></div>
+
+  <main class="container-narrow merchant-main-content" style="padding-top: 1.25rem; padding-bottom: 2rem;">
+    <div class="cf-fade" id="merchant-sub-content">
+      <!-- Subscription -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { merchantApi } from '../js/api.js';
+    import { formatMoney } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('merchant', '../login.html');
+    if (session) {
+      setupNav('merchant', 'more');
+      loadSubscription();
+    }
+
+    function loadSubscription() {
+      const merchantId = session.merchantId || 'm1';
+      const { subscription, merchant } = merchantApi.getSubscription(merchantId);
+      const isLapsed = subscription.status === 'lapsed';
+
+      const container = document.getElementById('merchant-sub-content');
+      container.innerHTML = `
+        <div class="flex items-center gap-2" style="margin-bottom: 1.25rem;">
+          <a href="more.html" class="btn btn-ghost btn-sm" style="padding:0.25rem 0.5rem;">
+            ${icon('arrowLeft', { size: 16 })} More
+          </a>
+          <div>
+            <h1 class="text-xl text-navy">CreditFlow Plan</h1>
+            <p class="text-xs text-muted">Merchant software subscription & portal access</p>
+          </div>
+        </div>
+
+        ${isLapsed ? `
+          <div class="alert-banner amber">
+            <div class="alert-banner-body">
+              <p class="alert-banner-title">Plan lapsed on ${subscription.lapsedOn}</p>
+              <p class="alert-banner-text">Renew today to continue receiving real-time transaction notifications and daily statement exports.</p>
+            </div>
+            <button id="btn-renew" class="btn btn-amber btn-sm">Renew plan</button>
+          </div>
+        ` : ''}
+
+        <div class="card card-content" style="margin-bottom: 1.25rem;">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="badge ${isLapsed ? 'badge-amber' : 'badge-success'}">
+                ${subscription.status.toUpperCase()}
+              </span>
+              <h2 class="text-2xl text-navy font-bold" style="margin-top:6px;">${subscription.plan} Plan</h2>
+              <p class="text-sm font-semibold text-teal tabular" style="margin-top:2px;">
+                ${formatMoney(subscription.monthlyFee)} / month
+              </p>
+            </div>
+            ${!isLapsed ? `
+              <div style="text-align:right;">
+                <p class="stat-label">Next billing</p>
+                <p class="text-xs font-semibold text-navy tabular" style="margin-top:4px;">${subscription.nextBillingDate}</p>
+              </div>
+            ` : `
+              <button id="btn-renew-main" class="btn btn-amber btn-sm">Renew for 30 days</button>
+            `}
+          </div>
+
+          <div style="border-top:1px solid var(--color-line); margin-top:1.25rem; padding-top:1rem;">
+            <ul style="list-style:none; display:flex; flex-direction:column; gap:6px; font-size:12.5px;">
+              <li><span class="text-success font-bold">✓</span> Real-time UPI settlement split</li>
+              <li><span class="text-success font-bold">✓</span> Automated loan repayment ledger</li>
+              <li><span class="text-success font-bold">✓</span> Standee print & dynamic amount QR</li>
+              <li><span class="text-success font-bold">✓</span> Priority merchant support</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Invoices List -->
+        <div class="card" style="margin-bottom: 1.25rem;">
+          <div class="card-header">
+            <h2 class="card-title">${icon('receipt', { size: 16 })} Subscription Invoices</h2>
+          </div>
+          <div class="card-content" style="padding:0;">
+            <div class="table-wrap" style="border:none;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Invoice ID</th>
+                    <th>Period</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${subscription.invoices.map(inv => `
+                    <tr>
+                      <td class="font-bold tabular">${inv.id}</td>
+                      <td class="text-muted">${inv.period}</td>
+                      <td class="font-semibold tabular text-navy">${formatMoney(inv.amount)}</td>
+                      <td>
+                        <span class="badge ${inv.status === 'paid' ? 'badge-success' : 'badge-amber'}">
+                          ${inv.status}
+                        </span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const handleRenew = () => {
+        merchantApi.renewSubscription(merchantId);
+        alert('Plan renewed successfully for 30 days.');
+        loadSubscription();
+      };
+
+      document.getElementById('btn-renew')?.addEventListener('click', handleRenew);
+      document.getElementById('btn-renew-main')?.addEventListener('click', handleRenew);
+    }
+  </script>
+</body>
+</html>

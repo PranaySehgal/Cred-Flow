@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alerts — Merchant Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div id="merchant-header"></div>
+
+  <main class="container-narrow merchant-main-content" style="padding-top: 1.25rem; padding-bottom: 2rem;">
+    <div class="cf-fade" id="merchant-alerts-content">
+      <!-- Alerts -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { merchantApi } from '../js/api.js';
+    import { relativeFromNow } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('merchant', '../login.html');
+    if (session) {
+      setupNav('merchant', 'alerts');
+      loadAlerts();
+    }
+
+    function loadAlerts() {
+      const merchantId = session.merchantId || 'm1';
+      const alerts = merchantApi.getAlerts(merchantId);
+
+      const container = document.getElementById('merchant-alerts-content');
+      container.innerHTML = `
+        <div class="page-header" style="margin-bottom: 1.25rem;">
+          <div>
+            <h1 class="page-title text-xl">Notifications & Alerts</h1>
+            <p class="page-subtitle text-xs">Milestones, activity notices and plan updates</p>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:0.75rem;">
+          ${alerts.length === 0 ? `
+            <div class="card card-content text-center" style="padding:2.5rem 1rem;">
+              <p class="text-muted">No notifications right now.</p>
+            </div>
+          ` : alerts.map(a => `
+            <div class="card card-content flex justify-between items-start gap-3" style="${!a.read ? 'border-left: 3px solid var(--color-amber); background: #fdfbf7;' : ''}">
+              <div style="flex:1;">
+                <div class="flex items-center gap-2">
+                  <span class="badge ${a.type === 'milestone' ? 'badge-success' : a.type === 'low_activity' ? 'badge-amber' : 'badge-teal'}">
+                    ${a.type.replace('_', ' ')}
+                  </span>
+                  <span class="text-xs text-muted">${relativeFromNow(a.createdAt)}</span>
+                </div>
+                <h3 class="text-sm font-semibold text-navy" style="margin: 0.4rem 0 0.2rem;">${a.title}</h3>
+                <p class="text-xs text-muted" style="line-height:1.5;">${a.body}</p>
+                ${a.action ? `
+                  <a href="${a.action.to.replace('/merchant/', '')}" class="btn btn-amber btn-sm" style="margin-top:0.6rem; display:inline-flex;">
+                    ${a.action.label} &rarr;
+                  </a>
+                ` : ''}
+              </div>
+              ${!a.read ? `
+                <button class="btn btn-ghost btn-sm btn-mark-read" data-id="${a.id}">
+                  Mark read
+                </button>
+              ` : `
+                <span class="text-xs text-muted">Read</span>
+              `}
+            </div>
+          `).join('')}
+        </div>
+      `;
+
+      document.querySelectorAll('.btn-mark-read').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const id = e.target.closest('button').getAttribute('data-id');
+          merchantApi.markAlertRead(id);
+          setupNav('merchant', 'alerts');
+          loadAlerts();
+        });
+      });
+    }
+  </script>
+</body>
+</html>

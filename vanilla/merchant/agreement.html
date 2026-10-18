@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Loan Agreement — Merchant Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>
+    .agreement-doc {
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-card);
+      padding: 2.5rem 2rem;
+      box-shadow: var(--shadow-card);
+    }
+    .clause {
+      margin-bottom: 1.25rem;
+    }
+    .clause-num {
+      font-weight: 700;
+      color: var(--color-navy);
+      font-size: 13px;
+    }
+    .clause-text {
+      font-size: 13px;
+      color: var(--color-ink);
+      line-height: 1.6;
+      margin-top: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="merchant-header"></div>
+
+  <main class="container-narrow merchant-main-content" style="padding-top: 1.25rem; padding-bottom: 2rem;">
+    <div class="cf-fade" id="merchant-agreement-content">
+      <!-- Agreement Document -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { merchantApi } from '../js/api.js';
+    import { formatMoney } from '../js/format.js';
+    import { icon, logo } from '../js/icons.js';
+
+    const session = requireRole('merchant', '../login.html');
+    if (session) {
+      setupNav('merchant', 'more');
+      loadAgreement();
+    }
+
+    function loadAgreement() {
+      const merchantId = session.merchantId || 'm1';
+      const { agreement, merchant, lender } = merchantApi.getAgreement(merchantId);
+
+      const container = document.getElementById('merchant-agreement-content');
+      container.innerHTML = `
+        <div class="page-header print-hide" style="margin-bottom: 1.25rem;">
+          <div class="flex items-center gap-2">
+            <a href="more.html" class="btn btn-ghost btn-sm" style="padding:0.25rem 0.5rem;">
+              ${icon('arrowLeft', { size: 16 })} More
+            </a>
+            <div>
+              <h1 class="page-title text-xl">Loan Agreement</h1>
+              <p class="page-subtitle text-xs">${agreement.id}</p>
+            </div>
+          </div>
+          <button id="btn-print" class="btn btn-outline btn-sm">
+            ${icon('printer', { size: 14 })} Print agreement
+          </button>
+        </div>
+
+        <div class="agreement-doc print-area">
+          <div class="flex justify-between items-center" style="border-bottom:2px solid var(--color-navy); padding-bottom:1rem; margin-bottom:1.5rem;">
+            <div>
+              ${logo({ height: 26 })}
+              <p class="text-xs text-muted" style="margin-top:4px;">Revenue-Share Credit Agreement</p>
+            </div>
+            <div style="text-align:right;">
+              <p class="font-bold text-navy text-sm tabular">${agreement.id}</p>
+              <p class="text-xs text-muted">Executed: ${agreement.consentDate}</p>
+            </div>
+          </div>
+
+          <div class="grid-2" style="background:var(--color-canvas); padding:1rem; border-radius:6px; margin-bottom:1.5rem;">
+            <div>
+              <p class="stat-label">Borrower (Shop)</p>
+              <p class="font-bold text-navy text-sm" style="margin-top:2px;">${merchant.name}</p>
+              <p class="text-xs text-muted">Owner: ${merchant.ownerName}</p>
+              <p class="text-xs text-muted">UPI: ${merchant.upiId}</p>
+              <p class="text-xs text-muted">${merchant.city}, ${merchant.state}</p>
+            </div>
+            <div>
+              <p class="stat-label">Lender</p>
+              <p class="font-bold text-navy text-sm" style="margin-top:2px;">${lender.name}</p>
+              <p class="text-xs text-muted">Contact: ${lender.contactPerson}</p>
+              <p class="text-xs text-muted">Phone: +91 ${lender.phone}</p>
+              <p class="text-xs text-muted">${lender.city}</p>
+            </div>
+          </div>
+
+          <div class="clause">
+            <p class="clause-num">1. Principal Advance & Tenure</p>
+            <p class="clause-text">
+              The Lender has extended a credit facility of <strong>${formatMoney(agreement.creditAmount)}</strong> to the Borrower on ${agreement.disbursedDate}. The targeted completion date of the facility is ${agreement.endDate}.
+            </p>
+          </div>
+
+          <div class="clause">
+            <p class="clause-num">2. Settlement-Split Repayment Rail</p>
+            <p class="clause-text">
+              The Borrower authorizes CreditFlow to route exactly <strong>${(agreement.rate * 100).toFixed(0)}%</strong> of every digital UPI sale received on UPI ID ${merchant.upiId} directly towards principal repayment until the outstanding balance of <strong>${formatMoney(agreement.outstanding)}</strong> reaches zero.
+            </p>
+          </div>
+
+          <div class="clause">
+            <p class="clause-num">3. Daily Floor & Grace Period</p>
+            <p class="clause-text">
+              The targeted minimum daily repayment floor is ${formatMoney(agreement.minDailyFloor)}. A grace window of <strong>${agreement.graceDays} days</strong> is recognized before any low activity flags are escalated to the lender.
+            </p>
+          </div>
+
+          <div class="clause">
+            <p class="clause-num">4. Penalty Terms & Late Fees</p>
+            <p class="clause-text">
+              ${agreement.penaltyTerms}
+            </p>
+          </div>
+
+          <div class="clause">
+            <p class="clause-num">5. Verification & Onboarding Agent</p>
+            <p class="clause-text">
+              This agreement was verified in person by Field Agent <strong>${agreement.onboardingAgent}</strong> under CreditFlow standard operating guidelines.
+            </p>
+          </div>
+
+          <div class="grid-2" style="border-top:1px solid var(--color-line); margin-top:2rem; padding-top:1.5rem;">
+            <div>
+              <p class="text-xs text-muted">Borrower Signature</p>
+              <p class="font-bold text-navy" style="margin-top:1.5rem;">${merchant.ownerName}</p>
+              <p class="text-xs text-muted">Digitally authorized via OTP</p>
+            </div>
+            <div>
+              <p class="text-xs text-muted">Lender Signature</p>
+              <p class="font-bold text-navy" style="margin-top:1.5rem;">${lender.contactPerson}</p>
+              <p class="text-xs text-muted">Digitally authorized</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btn-print')?.addEventListener('click', () => {
+        window.print();
+      });
+    }
+  </script>
+</body>
+</html>

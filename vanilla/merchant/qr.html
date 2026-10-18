@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UPI QR Code — Merchant Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+  <style>
+    .qr-standee {
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-card);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      box-shadow: var(--shadow-card);
+      max-width: 380px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="merchant-header"></div>
+
+  <main class="container-narrow merchant-main-content" style="padding-top: 1.25rem; padding-bottom: 2rem;">
+    <div class="cf-fade" id="merchant-qr-content">
+      <!-- QR Content -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { merchantApi } from '../js/api.js';
+    import { createQrSvg } from '../js/qr.js';
+    import { icon, logo } from '../js/icons.js';
+
+    const session = requireRole('merchant', '../login.html');
+    if (session) {
+      setupNav('merchant', 'qr');
+      loadQr();
+    }
+
+    function loadQr() {
+      const merchantId = session.merchantId || 'm1';
+      const merchant = merchantApi.getProfile(merchantId);
+
+      const container = document.getElementById('merchant-qr-content');
+      container.innerHTML = `
+        <div class="page-header" style="margin-bottom: 1.25rem;">
+          <div>
+            <h1 class="page-title text-xl">UPI QR Code</h1>
+            <p class="page-subtitle text-xs">Customer payments split automatically at settlement</p>
+          </div>
+          <button id="btn-print" class="btn btn-outline btn-sm print-hide">
+            ${icon('printer', { size: 14 })} Print QR
+          </button>
+        </div>
+
+        <!-- Standee Display -->
+        <div class="qr-standee print-area" id="qr-standee-box">
+          <div style="margin-bottom:1rem;">
+            ${logo({ height: 26 })}
+          </div>
+          <p class="text-xs text-muted uppercase-tracking">Scan & Pay with any UPI app</p>
+          <h2 class="text-xl text-navy" style="margin: 0.25rem 0;">${merchant.name}</h2>
+          <p class="text-xs text-muted font-medium" style="margin-bottom:1.5rem;">${merchant.city}, ${merchant.state}</p>
+
+          <div id="qr-code-svg-wrap" style="display:flex; justify-content:center; margin: 1.25rem auto;">
+            <!-- SVG QR injected -->
+          </div>
+
+          <div style="background:var(--color-tint-neutral); border-radius:6px; padding:0.5rem; margin-top:1rem;">
+            <p class="text-xs font-bold text-navy tabular" id="qr-upi-display">${merchant.upiId}</p>
+          </div>
+
+          <p class="text-xs text-muted" style="margin-top:1rem;">
+            Accepted on GPay, PhonePe, Paytm, BHIM & all bank UPI apps
+          </p>
+        </div>
+
+        <!-- Custom Amount Generator -->
+        <div class="card card-content print-hide" style="margin-top: 1.5rem; max-width: 380px; margin-left:auto; margin-right:auto;">
+          <h3 class="card-title text-sm" style="margin-bottom:0.75rem;">Generate QR with specific amount</h3>
+          <div class="flex gap-2">
+            <span class="btn btn-outline" style="font-weight:700; color:var(--color-navy); padding:0.6rem 0.85rem;">₹</span>
+            <input type="number" id="custom-qr-amount" class="form-input text-base font-bold tabular" placeholder="Optional amount (e.g. 500)">
+            <button id="btn-update-qr" class="btn btn-primary btn-sm">Set</button>
+          </div>
+        </div>
+      `;
+
+      function renderQr(amount) {
+        const amtParam = amount ? `&am=${amount}` : '';
+        const upiUri = `upi://pay?pa=${merchant.upiId}&pn=${encodeURIComponent(merchant.name)}&cu=INR${amtParam}`;
+        const svg = createQrSvg(upiUri, 210);
+        document.getElementById('qr-code-svg-wrap').innerHTML = svg;
+      }
+
+      renderQr();
+
+      document.getElementById('btn-update-qr')?.addEventListener('click', () => {
+        const val = Number(document.getElementById('custom-qr-amount').value) || 0;
+        renderQr(val > 0 ? val : null);
+      });
+
+      document.getElementById('btn-print')?.addEventListener('click', () => {
+        window.print();
+      });
+    }
+  </script>
+</body>
+</html>

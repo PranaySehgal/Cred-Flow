@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Disputes Queue — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-disputes-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatMoney, relativeFromNow } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'disputes');
+      loadDisputes();
+    }
+
+    function loadDisputes() {
+      let filterStatus = 'all';
+      const container = document.getElementById('admin-disputes-content');
+
+      function render() {
+        const rows = adminApi.getDisputes({ status: filterStatus });
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">Disputes & Claims Desk</h1>
+              <p class="page-subtitle">Mediate merchant transaction challenges, erroneous deductions and duplicate charges</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2" style="margin-bottom: 1.25rem;">
+            <button class="btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="all">All</button>
+            <button class="btn btn-sm ${filterStatus === 'open' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="open">Open</button>
+            <button class="btn btn-sm ${filterStatus === 'resolved' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="resolved">Resolved</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Dispute ID</th>
+                  <th>Merchant & Facility</th>
+                  <th>Claim Reason</th>
+                  <th>Disputed Amount</th>
+                  <th>Filed</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(d => `
+                  <tr>
+                    <td class="font-bold tabular text-navy">${d.id}</td>
+                    <td>
+                      <p class="font-bold text-navy text-sm">${d.merchantName}</p>
+                      <p class="text-xs text-muted tabular">Agr: ${d.agreementId} · Txn: ${d.transactionId}</p>
+                    </td>
+                    <td>
+                      <p class="text-xs font-semibold text-ink">${d.reason}</p>
+                      <p class="text-xs text-muted" style="max-width:280px;">${d.description}</p>
+                    </td>
+                    <td class="tabular font-bold text-danger">${formatMoney(d.amount)}</td>
+                    <td class="tabular text-xs text-muted">${relativeFromNow(d.createdAt)}</td>
+                    <td>
+                      <span class="badge ${d.status === 'open' ? 'badge-amber' : 'badge-success'}">
+                        ${d.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style="text-align:right;">
+                      <a href="dispute-detail.html?id=${d.id}" class="btn btn-outline btn-sm">
+                        Resolve &rarr;
+                      </a>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.querySelectorAll('.status-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            filterStatus = btn.getAttribute('data-status');
+            render();
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

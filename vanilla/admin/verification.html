@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verification Queue — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-verification-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { relativeFromNow, formatDateTime } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'verification');
+      loadQueue();
+    }
+
+    function loadQueue() {
+      let filterStatus = 'all';
+      const container = document.getElementById('admin-verification-content');
+
+      const statusBadge = {
+        pending: 'badge-amber',
+        approved: 'badge-success',
+        rejected: 'badge-danger',
+        more_docs: 'badge-neutral',
+      };
+
+      function render() {
+        const rows = adminApi.getVerifications({ status: filterStatus });
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">KYC & Document Verification</h1>
+              <p class="page-subtitle">Review field agent uploads, ID proofs and GPS shop visits</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2" style="margin-bottom: 1.25rem;">
+            <button class="btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="all">All</button>
+            <button class="btn btn-sm ${filterStatus === 'pending' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="pending">Pending</button>
+            <button class="btn btn-sm ${filterStatus === 'more_docs' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="more_docs">More Docs Required</button>
+            <button class="btn btn-sm ${filterStatus === 'approved' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="approved">Approved</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Verification ID</th>
+                  <th>Merchant / Shop</th>
+                  <th>Submitted</th>
+                  <th>Field Agent</th>
+                  <th>ID Proof</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(v => `
+                  <tr>
+                    <td class="font-bold tabular text-navy">${v.id}</td>
+                    <td>
+                      <p class="font-semibold text-navy text-sm">${v.merchantName}</p>
+                      <p class="text-xs text-muted">${v.gps?.address || ''}</p>
+                    </td>
+                    <td class="tabular text-xs text-muted">${relativeFromNow(v.submittedAt)}</td>
+                    <td class="text-xs font-semibold text-teal">${v.agentName}</td>
+                    <td class="text-xs tabular">${v.idType}: ${v.idNumber}</td>
+                    <td>
+                      <span class="badge ${statusBadge[v.status] || 'badge-neutral'}">
+                        ${v.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td style="text-align:right;">
+                      <a href="verification-detail.html?id=${v.id}" class="btn btn-outline btn-sm">
+                        Review &rarr;
+                      </a>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.querySelectorAll('.status-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            filterStatus = btn.getAttribute('data-status');
+            render();
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

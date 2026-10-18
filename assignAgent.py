@@ -1,9 +1,22 @@
 from sqlalchemy import text
 
 
+def getAgentTasks(connection, agent_id):
+    result = connection.execute(
+        text(
+            'SELECT agent_id, "Lat" AS lat, "Long" AS long, "Time", "OName", "OContact", "Status" '
+            'FROM "Agents" WHERE "agent_id" = :aid ORDER BY "Time" DESC'
+        ),
+        {"aid": agent_id},
+    )
+    tasks = [dict(row) for row in result.mappings().all()]
+    connection.commit()
+    return tasks
+
+
 def assignAgent(connection, aid, lat, long, date, oname, ocontact):
     query = text(
-        "INSERT INTO Agents(agent_id,lat,long,date,oname,ocontact,status) VALUES(:aid,:lat,:long,:date,:oname,:ocontact,'pending')"
+        """INSERT INTO "Agents"(agent_id,"Lat","Long","Time","OName","OContact","status") VALUES(:aid,:lat,:long,:date,:oname,:ocontact,'pending')"""
     )
     connection.execute(
         query,
@@ -11,18 +24,20 @@ def assignAgent(connection, aid, lat, long, date, oname, ocontact):
             "aid": aid,
             "lat": lat,
             "long": long,
-            "time": date,
+            "date": date,
             "oname": oname,
             "ocontact": ocontact,
         },
     )
+    connection.commit()
 
 
 def agentDecision(connection, aid, lat, long, date, oname, ocontact, status):
     query = text(
-        "Update Agents SET status = :status WHERE agent_id = :aid and oname = :oname and ocontact = :ocontact and lat = :lat and long = :long and date = :date"
+        'UPDATE "Agents" SET status = :status WHERE agent_id = :aid AND oname = :oname '
+        'AND ocontact = :ocontact AND "Lat" = :lat AND "Long" = :long AND time = :time'
     )
-    connection.execute(
+    result = connection.execute(
         query,
         {
             "aid": aid,
@@ -34,3 +49,7 @@ def agentDecision(connection, aid, lat, long, date, oname, ocontact, status):
             "ocontact": ocontact,
         },
     )
+    connection.commit()
+    if result.rowcount == 0:
+        raise LookupError("This assignment could not be found for your agent account.")
+    return {"STATUS": "SUCCESS", "status": status}

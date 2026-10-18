@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leads Pipeline — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-leads-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatMoney, relativeFromNow } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'leads');
+      loadLeads();
+    }
+
+    const STAGES = [
+      { id: 'lead', label: 'New Lead' },
+      { id: 'contacted', label: 'Contacted' },
+      { id: 'visit', label: 'Visit Scheduled' },
+      { id: 'verified', label: 'KYC Verified' },
+      { id: 'agreement', label: 'Agreement Sent' },
+      { id: 'active', label: 'Active Disbursed' },
+    ];
+
+    function loadLeads() {
+      const container = document.getElementById('admin-leads-content');
+
+      function render() {
+        const leads = adminApi.getLeads();
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">Merchant Onboarding Pipeline</h1>
+              <p class="page-subtitle">Track leads from initial counter contact to active daily repayment</p>
+            </div>
+            <span class="badge badge-teal">${leads.length} leads in funnel</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Business & Owner</th>
+                  <th>Location</th>
+                  <th>Credit Estimate</th>
+                  <th>Field Agent</th>
+                  <th>Pipeline Stage</th>
+                  <th>Notes</th>
+                  <th style="text-align:right;">Move Stage</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${leads.map(l => `
+                  <tr>
+                    <td>
+                      <p class="font-bold text-navy text-sm">${l.businessName}</p>
+                      <p class="text-xs text-muted">${l.ownerName} · +91 ${l.phone}</p>
+                      <p class="text-xs text-muted tabular">ID: ${l.id}</p>
+                    </td>
+                    <td class="text-xs text-muted">${l.city}</td>
+                    <td class="tabular font-bold text-navy">${formatMoney(l.creditEstimate)}</td>
+                    <td class="text-xs font-semibold text-teal">${l.assignedTo}</td>
+                    <td>
+                      <span class="badge ${l.stage === 'active' ? 'badge-success' : l.stage === 'verified' || l.stage === 'agreement' ? 'badge-teal' : 'badge-neutral'}">
+                        ${STAGES.find(s => s.id === l.stage)?.label || l.stage}
+                      </span>
+                    </td>
+                    <td class="text-xs text-muted" style="max-width:240px;">${l.note}</td>
+                    <td style="text-align:right;">
+                      <select class="form-select lead-stage-select" data-id="${l.id}" style="padding:0.3rem 0.5rem; font-size:12px; width:auto;">
+                        ${STAGES.map(s => `
+                          <option value="${s.id}" ${l.stage === s.id ? 'selected' : ''}>${s.label}</option>
+                        `).join('')}
+                      </select>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.querySelectorAll('.lead-stage-select').forEach(sel => {
+          sel.addEventListener('change', (e) => {
+            const id = e.target.getAttribute('data-id');
+            const newStage = e.target.value;
+            adminApi.moveLead(id, newStage);
+            render();
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

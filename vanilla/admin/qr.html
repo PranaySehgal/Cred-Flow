@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Code Management — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-qr-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatDate } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'qr');
+      loadQr();
+    }
+
+    function loadQr() {
+      const container = document.getElementById('admin-qr-content');
+
+      function render() {
+        const profiles = adminApi.getQrProfiles();
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">QR Code Inventory & Mapping</h1>
+              <p class="page-subtitle">Manage merchant UPI handles, standees, deactivations and handle reassignment</p>
+            </div>
+            <span class="badge badge-teal">${profiles.length} registered handles</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Merchant / Shop</th>
+                  <th>Current UPI ID</th>
+                  <th>Status</th>
+                  <th>Issued Date</th>
+                  <th>Reassigned History</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${profiles.map(q => `
+                  <tr>
+                    <td>
+                      <p class="font-bold text-navy text-sm">${q.merchantName}</p>
+                      <p class="text-xs text-muted tabular">Merchant ID: ${q.merchantId}</p>
+                    </td>
+                    <td class="font-bold tabular text-navy">${q.upiId}</td>
+                    <td>
+                      <span class="badge ${q.status === 'active' ? 'badge-success' : 'badge-danger'}">
+                        ${q.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td class="tabular text-xs text-muted">${formatDate(q.generatedOn)}</td>
+                    <td>
+                      ${q.reassignedFrom ? `
+                        <span class="text-xs text-muted">Reassigned from: <strong>${q.reassignedFrom}</strong></span>
+                      ` : `
+                        <span class="text-xs text-muted">Original handle</span>
+                      `}
+                    </td>
+                    <td style="text-align:right;">
+                      <div class="flex items-center justify-end gap-2">
+                        <button class="btn btn-outline btn-sm btn-reassign" data-id="${q.merchantId}" data-name="${q.merchantName}" data-upi="${q.upiId}">
+                          Reassign
+                        </button>
+                        <button class="btn btn-sm ${q.status === 'active' ? 'btn-ghost text-danger' : 'btn-primary'} btn-toggle-status" data-id="${q.merchantId}" data-status="${q.status}">
+                          ${q.status === 'active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.querySelectorAll('.btn-toggle-status').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const mId = e.target.getAttribute('data-id');
+            const current = e.target.getAttribute('data-status');
+            const next = current === 'active' ? 'inactive' : 'active';
+            const reason = prompt(`Reason for ${next === 'active' ? 'activating' : 'deactivating'} this QR code:`) || 'Ops policy update';
+            adminApi.setQrStatus(mId, next, reason);
+            render();
+          });
+        });
+
+        document.querySelectorAll('.btn-reassign').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const mId = e.target.getAttribute('data-id');
+            const name = e.target.getAttribute('data-name');
+            const oldUpi = e.target.getAttribute('data-upi');
+            const newUpi = prompt(`Enter new UPI ID for ${name}:`, oldUpi);
+            if (newUpi && newUpi !== oldUpi) {
+              adminApi.reassignQr(mId, newUpi.trim());
+              alert(`QR handle updated to ${newUpi}. Audit entry recorded.`);
+              render();
+            }
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

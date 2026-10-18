@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Progress — Merchant Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div id="merchant-header"></div>
+
+  <main class="container-narrow merchant-main-content" style="padding-top: 1.25rem; padding-bottom: 2rem;">
+    <div class="cf-fade" id="merchant-progress-content">
+      <!-- Loaded dynamically -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { merchantApi } from '../js/api.js';
+    import { formatMoney } from '../js/format.js';
+    import { renderBarChart } from '../js/charts.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('merchant', '../login.html');
+    if (session) {
+      setupNav('merchant', 'progress');
+      loadProgress();
+    }
+
+    function loadProgress() {
+      const merchantId = session.merchantId || 'm1';
+      const data = merchantApi.getProgress(merchantId);
+      const { agreement, stats, series14, week } = data;
+      const repaid = agreement.creditAmount - agreement.outstanding;
+      const percent = Math.min(((repaid / agreement.creditAmount) * 100), 100).toFixed(0);
+
+      const container = document.getElementById('merchant-progress-content');
+      container.innerHTML = `
+        <div class="page-header" style="margin-bottom: 1.25rem;">
+          <div>
+            <h1 class="page-title text-xl">Repayment progress</h1>
+            <p class="page-subtitle text-xs">Pace against agreement terms</p>
+          </div>
+          <span class="badge ${stats.state === 'completed' ? 'badge-success' : 'badge-teal'}">
+            ${percent}% covered
+          </span>
+        </div>
+
+        <div class="card card-content" style="margin-bottom: 1.25rem;">
+          <p class="stat-label">Total Credit Repayment</p>
+          <div class="flex items-baseline gap-2" style="margin-top: 4px;">
+            <span class="stat-value text-3xl tabular text-navy">${formatMoney(repaid)}</span>
+            <span class="text-sm text-muted">of ${formatMoney(agreement.creditAmount)}</span>
+          </div>
+
+          <div style="margin-top: 1rem;">
+            <div class="progress-bar" style="height: 10px;">
+              <div class="progress-fill ${stats.state === 'completed' ? 'success' : 'teal'}" style="width: ${percent}%;"></div>
+            </div>
+            <div class="flex justify-between text-xs text-muted" style="margin-top:6px;">
+              <span>Started: ${agreement.startDate}</span>
+              <span>Target: ${agreement.endDate}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 14-day Daily Chart -->
+        <div class="card" style="margin-bottom: 1.25rem;">
+          <div class="card-header">
+            <h2 class="card-title">${icon('chart', { size: 16 })} Daily collections (Last 14 days)</h2>
+            <div class="flex items-center gap-3 text-xs">
+              <span class="flex items-center gap-1"><span style="width:8px; height:8px; border-radius:2px; background:var(--color-teal); display:inline-block;"></span> Sales</span>
+              <span class="flex items-center gap-1"><span style="width:8px; height:8px; border-radius:2px; background:var(--color-amber); display:inline-block;"></span> Repaid</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <div id="chart-container" style="width: 100%; height: 180px;"></div>
+          </div>
+        </div>
+
+        <!-- Weekly Summary -->
+        <div class="card card-content" style="margin-bottom: 1.25rem;">
+          <h2 class="card-title" style="margin-bottom: 1rem;">${icon('wallet', { size: 16 })} Last 7 Days Activity</h2>
+          <div class="grid-2">
+            <div>
+              <p class="stat-label" style="font-size:10px;">Active sales days</p>
+              <p class="text-xl font-bold tabular text-navy" style="margin-top:2px;">${week.activeDays} of ${week.days}</p>
+            </div>
+            <div>
+              <p class="stat-label" style="font-size:10px;">Total sales</p>
+              <p class="text-xl font-bold tabular text-navy" style="margin-top:2px;">${formatMoney(week.sales)}</p>
+            </div>
+            <div>
+              <p class="stat-label" style="font-size:10px;">Repayment routed</p>
+              <p class="text-xl font-bold tabular text-teal" style="margin-top:2px;">${formatMoney(week.repayment)}</p>
+            </div>
+            <div>
+              <p class="stat-label" style="font-size:10px;">Credited to shop</p>
+              <p class="text-xl font-bold tabular text-navy" style="margin-top:2px;">${formatMoney(week.received)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Render chart
+      const chartData = series14.map(d => ({
+        date: d.date,
+        value: d.sales,
+        value2: d.repaymentRouted,
+      }));
+      renderBarChart(document.getElementById('chart-container'), chartData, { height: 180 });
+    }
+  </script>
+</body>
+</html>

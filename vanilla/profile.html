@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Account details — CreditFlow</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="app-header print-hide">
+    <div class="container-narrow app-header-inner">
+      <a href="index.html" class="logo-link">CreditFlow</a>
+      <nav class="flex items-center gap-2">
+        <a id="profile-home-link" class="btn btn-ghost btn-sm">Portal home</a>
+        <button data-action="sign-out" class="btn btn-outline btn-sm">Sign out</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container-narrow" style="padding-top:1.5rem;padding-bottom:3rem;">
+    <div id="profile-content" aria-live="polite">Loading account details…</div>
+  </main>
+
+  <script type="module" src="./js/profile.js"></script>
+</body>
+</html>

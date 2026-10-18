@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super-admin operations — CreditFlow</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+  <div id="superadmin-header"></div>
+  <main class="container-wide" style="padding-top:1.5rem;padding-bottom:3rem;">
+    <div id="superadmin-content" aria-live="polite">Loading operations…</div>
+  </main>
+  <dialog id="account-editor" class="card" style="width:min(560px,calc(100% - 2rem));max-height:90vh;overflow:auto;border:0;border-radius:var(--radius-card);padding:0;margin:auto;">
+    <form id="account-edit-form" class="card-content">
+      <div class="flex justify-between items-center" style="margin-bottom:1rem;">
+        <h2 class="card-title">Edit account details</h2>
+        <button type="button" class="btn btn-ghost btn-sm" id="close-account-editor">Close</button>
+      </div>
+      <input type="hidden" name="user_id">
+      <div class="form-group">
+        <label for="edit-owner" class="form-label">Owner / contact name</label>
+        <input id="edit-owner" name="owner_name" class="form-input" maxlength="255">
+      </div>
+      <div class="form-group">
+        <label for="edit-shop" class="form-label">Business / shop name</label>
+        <input id="edit-shop" name="shop_name" class="form-input" maxlength="255">
+      </div>
+      <div class="form-group">
+        <label for="edit-mobile" class="form-label">Mobile number</label>
+        <input id="edit-mobile" name="mobile_number" class="form-input" maxlength="32">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="edit-lat" class="form-label">Latitude</label>
+          <input id="edit-lat" name="latitude" type="number" min="-90" max="90" step="any" class="form-input">
+        </div>
+        <div class="form-group">
+          <label for="edit-long" class="form-label">Longitude</label>
+          <input id="edit-long" name="longitude" type="number" min="-180" max="180" step="any" class="form-input">
+        </div>
+      </div>
+      <div id="account-edit-error" class="alert-banner danger" role="alert" hidden></div>
+      <button type="submit" class="btn btn-primary" id="save-account-details">Save details</button>
+    </form>
+  </dialog>
+  <script type="module" src="../js/superadmin.js"></script>
+</body>
+</html>

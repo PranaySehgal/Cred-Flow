@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Verification — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-vdetail-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatDateTime } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'verification');
+      loadDetail();
+    }
+
+    function loadDetail() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const vId = urlParams.get('id') || 'VF-2210';
+
+      let item;
+      try {
+        item = adminApi.getVerification(vId);
+      } catch (e) {
+        document.getElementById('admin-vdetail-content').innerHTML = `
+          <div class="alert-banner danger">
+            <div class="alert-banner-body"><p class="alert-banner-title">${e.message}</p></div>
+          </div>
+        `;
+        return;
+      }
+
+      const container = document.getElementById('admin-vdetail-content');
+      container.innerHTML = `
+        <div class="page-header" style="margin-bottom: 1.25rem;">
+          <div class="flex items-center gap-3">
+            <a href="verification.html" class="btn btn-outline btn-sm">
+              ${icon('arrowLeft', { size: 14 })} Back
+            </a>
+            <div>
+              <h1 class="page-title text-xl">Verification Review: ${item.id}</h1>
+              <p class="page-subtitle">${item.merchantName}</p>
+            </div>
+          </div>
+          <span class="badge ${item.status === 'approved' ? 'badge-success' : item.status === 'rejected' ? 'badge-danger' : 'badge-amber'} text-sm">
+            ${item.status.toUpperCase()}
+          </span>
+        </div>
+
+        <div class="grid-2" style="margin-bottom: 1.5rem;">
+          <!-- Field Agent Visit Report -->
+          <div class="card card-content">
+            <h2 class="card-title text-base" style="margin-bottom: 1rem;">
+              ${icon('clipboardCheck', { size: 16 })} Field Agent Report
+            </h2>
+            <div style="display:flex; flex-direction:column; gap:0.6rem;">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Agent name:</span>
+                <span class="font-bold text-navy">${item.agentName}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Submitted on:</span>
+                <span class="font-semibold text-ink">${formatDateTime(item.submittedAt)}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Verified address:</span>
+                <span class="font-semibold text-ink">${item.gps?.address || 'N/A'}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Shop photos attached:</span>
+                <span class="badge badge-teal">${item.shopPhotos} Geo-tagged Photos</span>
+              </div>
+            </div>
+
+            <div style="background:var(--color-canvas); padding:0.85rem; border-radius:6px; margin-top:1rem;">
+              <p class="stat-label">Agent Field Notes</p>
+              <p class="text-xs text-ink" style="margin-top:4px; line-height:1.5;">${item.agentNotes}</p>
+            </div>
+          </div>
+
+          <!-- Document Verification Details -->
+          <div class="card card-content">
+            <h2 class="card-title text-base" style="margin-bottom: 1rem;">
+              ${icon('shield', { size: 16 })} Identity & Business Documents
+            </h2>
+            <div style="display:flex; flex-direction:column; gap:0.6rem;">
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">ID Document Type:</span>
+                <span class="font-bold text-navy">${item.idType}</span>
+              </div>
+              <div class="flex justify-between items-center text-sm">
+                <span class="text-muted">Document Number:</span>
+                <span class="font-bold tabular text-navy">${item.idNumber}</span>
+              </div>
+            </div>
+
+            ${item.pendingNote ? `
+              <div class="alert-banner amber" style="margin-top:1rem;">
+                <div class="alert-banner-body">
+                  <p class="alert-banner-title">Pending Note</p>
+                  <p class="alert-banner-text">${item.pendingNote}</p>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Review Actions Form -->
+            <div style="border-top:1px solid var(--color-line); margin-top:1.5rem; padding-top:1.25rem;">
+              <p class="stat-label" style="margin-bottom:0.75rem;">Decision Action</p>
+              <div class="form-group">
+                <label for="review-reason" class="form-label">Review note or rejection/more docs reason</label>
+                <input type="text" id="review-reason" class="form-input" placeholder="e.g. Address proof verified with electricity bill.">
+              </div>
+
+              <div class="flex gap-2" style="flex-wrap:wrap;">
+                <button id="btn-approve" class="btn btn-primary btn-sm" style="background:var(--color-success);">
+                  Approve Verification
+                </button>
+                <button id="btn-more-docs" class="btn btn-amber btn-sm">
+                  Request More Docs
+                </button>
+                <button id="btn-reject" class="btn btn-danger btn-sm">
+                  Reject
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const reasonInput = document.getElementById('review-reason');
+
+      document.getElementById('btn-approve')?.addEventListener('click', () => {
+        adminApi.reviewVerification(vId, { decision: 'approved', reason: reasonInput.value });
+        alert('Verification approved! The agreement can now be created.');
+        loadDetail();
+      });
+
+      document.getElementById('btn-more-docs')?.addEventListener('click', () => {
+        const r = reasonInput.value.trim() || 'Additional address or bank proof requested.';
+        adminApi.reviewVerification(vId, { decision: 'more_docs', reason: r });
+        alert('Sent back for more documents.');
+        loadDetail();
+      });
+
+      document.getElementById('btn-reject')?.addEventListener('click', () => {
+        const r = reasonInput.value.trim() || 'Incomplete documentation or unverified address.';
+        adminApi.reviewVerification(vId, { decision: 'rejected', reason: r });
+        alert('Verification rejected.');
+        loadDetail();
+      });
+    }
+  </script>
+</body>
+</html>

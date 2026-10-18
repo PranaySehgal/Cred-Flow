@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Risk Alerts — Lender Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar print-hide" id="lender-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile print-hide" id="lender-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="lender-risk-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { lenderApi } from '../js/api.js';
+    import { relativeFromNow } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('lender', '../login.html');
+    if (session) {
+      setupNav('lender', 'risk');
+      loadRisk();
+    }
+
+    function loadRisk() {
+      const lenderId = session.lenderId || 'l1';
+      let filterStatus = 'all';
+
+      const container = document.getElementById('lender-risk-content');
+
+      const severityBadge = {
+        high: 'badge-danger',
+        medium: 'badge-amber',
+        low: 'badge-teal',
+      };
+
+      function render() {
+        const alerts = lenderApi.getRiskAlerts(lenderId, { status: filterStatus });
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">Risk & Early Warning Alerts</h1>
+              <p class="page-subtitle">Pace drops, prolonged inactivity and default monitoring</p>
+            </div>
+          </div>
+
+          <div class="flex gap-2" style="margin-bottom: 1.25rem;">
+            <button class="btn btn-sm ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="all">All Alerts</button>
+            <button class="btn btn-sm ${filterStatus === 'new' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="new">New</button>
+            <button class="btn btn-sm ${filterStatus === 'acknowledged' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="acknowledged">Acknowledged</button>
+            <button class="btn btn-sm ${filterStatus === 'escalated' ? 'btn-primary' : 'btn-outline'} status-btn" data-status="escalated">Escalated</button>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:0.85rem;">
+            ${alerts.length === 0 ? `
+              <div class="card card-content text-center text-muted" style="padding:3rem 1rem;">
+                No risk alerts found.
+              </div>
+            ` : alerts.map(r => `
+              <div class="card card-content flex justify-between items-start gap-4" style="${r.severity === 'high' ? 'border-left: 4px solid var(--color-danger);' : ''}">
+                <div style="flex:1;">
+                  <div class="flex items-center gap-2">
+                    <span class="badge ${severityBadge[r.severity] || 'badge-neutral'} uppercase-tracking">
+                      ${r.severity} severity
+                    </span>
+                    <span class="badge badge-neutral">${r.type.replace('_', ' ')}</span>
+                    <span class="text-xs text-muted tabular">${relativeFromNow(r.createdAt)}</span>
+                  </div>
+
+                  <h3 class="text-base font-bold text-navy" style="margin: 0.5rem 0 0.2rem;">
+                    ${r.merchantName} · Agreement ${r.agreementId}
+                  </h3>
+                  <p class="text-xs text-muted">
+                    ${r.daysSinceLastPayment > 0 ? `Last payment: ${r.daysSinceLastPayment} days ago.` : 'Recent activity low.'}
+                    ${r.note ? ` Note: ${r.note}` : ''}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2" style="flex-wrap:wrap; justify-content:flex-end;">
+                  ${r.status === 'new' ? `
+                    <button class="btn btn-outline btn-sm btn-ack" data-id="${r.id}">
+                      Acknowledge
+                    </button>
+                  ` : ''}
+                  ${r.status !== 'escalated' ? `
+                    <button class="btn btn-amber btn-sm btn-esc" data-id="${r.id}">
+                      ${icon('alert', { size: 14 })} Escalate to Ops
+                    </button>
+                  ` : `
+                    <span class="badge badge-danger">Escalated to Ops</span>
+                  `}
+                  <a href="repayment.html?id=${r.merchantId}" class="btn btn-ghost btn-sm">
+                    Inspect &rarr;
+                  </a>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        document.querySelectorAll('.status-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            filterStatus = btn.getAttribute('data-status');
+            render();
+          });
+        });
+
+        document.querySelectorAll('.btn-ack').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.closest('button').getAttribute('data-id');
+            lenderApi.acknowledgeRisk(id);
+            setupNav('lender', 'risk');
+            render();
+          });
+        });
+
+        document.querySelectorAll('.btn-esc').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.closest('button').getAttribute('data-id');
+            lenderApi.escalateRisk(id);
+            setupNav('lender', 'risk');
+            render();
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

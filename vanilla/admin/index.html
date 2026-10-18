@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Overview — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-overview-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatMoney, relativeFromNow } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'overview');
+      loadOverview();
+    }
+
+    function loadOverview() {
+      const data = adminApi.getOverview();
+      const { stats, exceptions, unpaidFees } = data;
+
+      const container = document.getElementById('admin-overview-content');
+      container.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h1 class="page-title text-2xl">Operations Overview</h1>
+            <p class="page-subtitle">Real-time platform ledger, settlement health and ops queue</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-muted">Generated ${relativeFromNow(stats.generatedAt)}</span>
+            <button id="btn-refresh" class="btn btn-outline btn-sm">
+              ${icon('rotate', { size: 14 })} Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Key KPIs -->
+        <div class="grid-4" style="margin-bottom: 1.5rem;">
+          <div class="stat-card">
+            <p class="stat-label">Sales Processed Today</p>
+            <p class="stat-value tabular">${formatMoney(stats.totalSalesToday)}</p>
+            <p class="stat-sub font-semibold text-teal">${formatMoney(stats.totalRoutedToday)} auto-routed to lenders</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Settlement Success</p>
+            <p class="stat-value tabular text-success">${stats.routingSuccessRate}%</p>
+            <p class="stat-sub">Reconciliation: <strong class="text-success">${stats.reconciliation.toUpperCase()}</strong></p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Active Agreements</p>
+            <p class="stat-value tabular text-navy">${stats.activeAgreements}</p>
+            <p class="stat-sub">System default rate: ${stats.defaultRate}%</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Pending Reviews</p>
+            <p class="stat-value tabular ${stats.verificationsPending > 0 ? 'text-amber' : 'text-navy'}">
+              ${stats.verificationsPending}
+            </p>
+            <p class="stat-sub">${stats.openDisputes} open dispute claims</p>
+          </div>
+        </div>
+
+        <!-- Exceptions & Intervention Queue -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header flex justify-between items-center">
+            <h2 class="card-title text-base">
+              ${icon('shieldAlert', { size: 18 })} Exception & Action Queue (${exceptions.length})
+            </h2>
+            <span class="badge ${exceptions.length > 0 ? 'badge-amber' : 'badge-success'}">
+              ${exceptions.length > 0 ? 'Attention Needed' : 'Queue Clear'}
+            </span>
+          </div>
+          <div class="card-content" style="padding:0;">
+            <div class="table-wrap" style="border:none;">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Type</th>
+                    <th>Subject</th>
+                    <th>Detail</th>
+                    <th>Time</th>
+                    <th style="text-align:right;">Resolve</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${exceptions.length === 0 ? `
+                    <tr>
+                      <td colspan="5" class="text-center text-muted" style="padding:2rem 1rem;">
+                        No urgent exceptions in the queue.
+                      </td>
+                    </tr>
+                  ` : exceptions.map(ex => `
+                    <tr>
+                      <td>
+                        <span class="badge ${ex.kind === 'Dispute' ? 'badge-danger' : ex.kind === 'Risk' ? 'badge-amber' : 'badge-teal'}">
+                          ${ex.kind}
+                        </span>
+                      </td>
+                      <td class="font-bold text-navy">${ex.label}</td>
+                      <td class="text-muted">${ex.detail}</td>
+                      <td class="text-xs text-muted tabular">${relativeFromNow(ex.at)}</td>
+                      <td style="text-align:right;">
+                        <a href="${ex.kind === 'Dispute' ? `disputes.html` : ex.kind === 'Risk' ? 'risk.html' : 'fees.html'}" class="btn btn-outline btn-sm">
+                          Handle &rarr;
+                        </a>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ops Shortcuts -->
+        <div class="grid-3">
+          <a href="leads.html" class="card card-content flex items-center gap-3" style="text-decoration:none;">
+            <span style="background:var(--color-tint-teal); color:var(--color-teal); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+              ${icon('users', { size: 20 })}
+            </span>
+            <div>
+              <p class="font-semibold text-sm text-navy">Leads Pipeline</p>
+              <p class="text-xs text-muted">Merchant onboarding stages</p>
+            </div>
+          </a>
+          <a href="verification.html" class="card card-content flex items-center gap-3" style="text-decoration:none;">
+            <span style="background:var(--color-tint-amber); color:var(--color-amber-ink); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+              ${icon('clipboardCheck', { size: 20 })}
+            </span>
+            <div>
+              <p class="font-semibold text-sm text-navy">KYC Verification</p>
+              <p class="text-xs text-muted">${stats.verificationsPending} items pending review</p>
+            </div>
+          </a>
+          <a href="agreement-new.html" class="card card-content flex items-center gap-3" style="text-decoration:none;">
+            <span style="background:var(--color-tint-navy); color:var(--color-navy); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center;">
+              ${icon('fileSignature', { size: 20 })}
+            </span>
+            <div>
+              <p class="font-semibold text-sm text-navy">Draft Agreement</p>
+              <p class="text-xs text-muted">Create new credit facility</p>
+            </div>
+          </a>
+        </div>
+      `;
+
+      document.getElementById('btn-refresh')?.addEventListener('click', loadOverview);
+    }
+  </script>
+</body>
+</html>

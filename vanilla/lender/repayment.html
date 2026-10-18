@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Merchant Repayment Detail — Lender Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar print-hide" id="lender-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile print-hide" id="lender-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="lender-repayment-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { lenderApi } from '../js/api.js';
+    import { formatMoney } from '../js/format.js';
+    import { renderBarChart } from '../js/charts.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('lender', '../login.html');
+    if (session) {
+      setupNav('lender', 'merchants');
+      loadRepayment();
+    }
+
+    function loadRepayment() {
+      const lenderId = session.lenderId || 'l1';
+      const urlParams = new URLSearchParams(window.location.search);
+      const merchantId = urlParams.get('id') || 'm1';
+
+      let data;
+      try {
+        data = lenderApi.getRepayment(lenderId, merchantId);
+      } catch (err) {
+        document.getElementById('lender-repayment-content').innerHTML = `
+          <div class="alert-banner danger">
+            <div class="alert-banner-body">
+              <p class="alert-banner-title">Could not load repayment details</p>
+              <p class="alert-banner-text">${err.message}</p>
+            </div>
+            <a href="merchants.html" class="btn btn-outline btn-sm">&larr; Back to merchants</a>
+          </div>
+        `;
+        return;
+      }
+
+      const { agreement, merchant, stats, series30 } = data;
+      const repaid = agreement.creditAmount - agreement.outstanding;
+
+      const container = document.getElementById('lender-repayment-content');
+      container.innerHTML = `
+        <div class="page-header" style="margin-bottom: 1.25rem;">
+          <div class="flex items-center gap-3">
+            <a href="merchants.html" class="btn btn-outline btn-sm">
+              ${icon('arrowLeft', { size: 14 })} Back
+            </a>
+            <div>
+              <h1 class="page-title text-xl">${merchant.name} — Collections</h1>
+              <p class="page-subtitle">${merchant.city} · Agreement ${agreement.id}</p>
+            </div>
+          </div>
+          <a href="agreement.html?id=${merchant.id}" class="btn btn-outline btn-sm">
+            ${icon('fileSignature', { size: 14 })} View Agreement
+          </a>
+        </div>
+
+        <div class="grid-4" style="margin-bottom: 1.5rem;">
+          <div class="stat-card">
+            <p class="stat-label">Outstanding Balance</p>
+            <p class="stat-value tabular text-navy">${formatMoney(agreement.outstanding)}</p>
+            <p class="stat-sub">of ${formatMoney(agreement.creditAmount)} total</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Today's Routed</p>
+            <p class="stat-value tabular text-teal">${formatMoney(stats.todayRepayment)}</p>
+            <p class="stat-sub">From ${formatMoney(stats.todaySales)} sales</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Last 7 Days</p>
+            <p class="stat-value tabular text-navy">${formatMoney(stats.weekRepayment)}</p>
+            <p class="stat-sub">Pace ratio: ${(stats.paceRatio * 100).toFixed(0)}%</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Last 30 Days</p>
+            <p class="stat-value tabular text-navy">${formatMoney(stats.monthRepayment)}</p>
+            <p class="stat-sub">Avg daily sales: ${formatMoney(stats.avgDailySales)}</p>
+          </div>
+        </div>
+
+        <!-- 30-Day Collections Chart -->
+        <div class="card" style="margin-bottom: 1.5rem;">
+          <div class="card-header">
+            <h2 class="card-title text-base">${icon('chart', { size: 16 })} Daily Repayments Routed (Last 30 Days)</h2>
+          </div>
+          <div class="card-content">
+            <div id="repay-chart-container" style="width: 100%; height: 200px;"></div>
+          </div>
+        </div>
+
+        <div class="card card-content">
+          <h2 class="card-title text-base" style="margin-bottom: 1rem;">Facility Terms & Milestones</h2>
+          <div class="grid-3">
+            <div>
+              <p class="stat-label">Split Rate</p>
+              <p class="text-base font-bold text-navy" style="margin-top:2px;">${(agreement.rate * 100).toFixed(0)}% of every sale</p>
+            </div>
+            <div>
+              <p class="stat-label">Min Daily Floor</p>
+              <p class="text-base font-bold text-navy" style="margin-top:2px;">${formatMoney(agreement.minDailyFloor)} / day</p>
+            </div>
+            <div>
+              <p class="stat-label">Projected Payoff</p>
+              <p class="text-base font-bold text-teal" style="margin-top:2px;">
+                ${stats.projectedCompletionDays ? `in ~${stats.projectedCompletionDays} days` : 'Not projected'}
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Render Bar Chart
+      const chartData = series30.map(d => ({
+        date: d.date,
+        value: d.repaymentRouted,
+      }));
+      renderBarChart(document.getElementById('repay-chart-container'), chartData, {
+        height: 200,
+        barColor: '#0a4a5c'
+      });
+    }
+  </script>
+</body>
+</html>

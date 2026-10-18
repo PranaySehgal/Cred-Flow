@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fee Accounting — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-fees-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { formatMoney, formatDate } from '../js/format.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'fees');
+      loadFees();
+    }
+
+    function loadFees() {
+      let typeFilter = 'all';
+      let statusFilter = 'all';
+
+      const container = document.getElementById('admin-fees-content');
+
+      function render() {
+        const rows = adminApi.getFees({ type: typeFilter, status: statusFilter });
+        const total = rows.reduce((sum, r) => sum + r.amount, 0);
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">Fee Accounting & Receivables</h1>
+              <p class="page-subtitle">Track platform cuts, merchant subscription billing and onboarding fees</p>
+            </div>
+            <div class="stat-card" style="padding:0.4rem 0.85rem;">
+              <span class="stat-label">Total in view:</span>
+              <span class="font-bold tabular text-navy">${formatMoney(total)}</span>
+            </div>
+          </div>
+
+          <!-- Filters -->
+          <div class="card card-content flex items-center gap-3" style="margin-bottom:1.25rem; flex-wrap:wrap;">
+            <div class="flex items-center gap-2">
+              <label for="filter-fee-type" class="form-label" style="margin-bottom:0;">Type:</label>
+              <select id="filter-fee-type" class="form-select" style="padding:0.4rem 0.75rem; font-size:12px;">
+                <option value="all" ${typeFilter === 'all' ? 'selected' : ''}>All Types</option>
+                <option value="platform" ${typeFilter === 'platform' ? 'selected' : ''}>Platform routing</option>
+                <option value="subscription" ${typeFilter === 'subscription' ? 'selected' : ''}>Subscription monthly</option>
+                <option value="late_fee" ${typeFilter === 'late_fee' ? 'selected' : ''}>Late fee</option>
+                <option value="onboarding" ${typeFilter === 'onboarding' ? 'selected' : ''}>Onboarding kit</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <label for="filter-fee-status" class="form-label" style="margin-bottom:0;">Status:</label>
+              <select id="filter-fee-status" class="form-select" style="padding:0.4rem 0.75rem; font-size:12px;">
+                <option value="all" ${statusFilter === 'all' ? 'selected' : ''}>All</option>
+                <option value="paid" ${statusFilter === 'paid' ? 'selected' : ''}>Paid</option>
+                <option value="unpaid" ${statusFilter === 'unpaid' ? 'selected' : ''}>Unpaid</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Fees Table -->
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Fee ID</th>
+                  <th>Date</th>
+                  <th>Merchant</th>
+                  <th>Type</th>
+                  <th>Period / Context</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th style="text-align:right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(f => `
+                  <tr>
+                    <td class="font-bold tabular text-navy">${f.id}</td>
+                    <td class="tabular text-xs text-muted">${formatDate(f.date)}</td>
+                    <td class="font-semibold text-navy text-sm">${f.merchantName}</td>
+                    <td>
+                      <span class="badge ${f.type === 'platform' ? 'badge-teal' : f.type === 'subscription' ? 'badge-navy' : 'badge-amber'}">
+                        ${f.type.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td class="text-xs text-muted">${f.period}</td>
+                    <td class="font-bold tabular text-navy">${formatMoney(f.amount)}</td>
+                    <td>
+                      <span class="badge ${f.status === 'paid' ? 'badge-success' : 'badge-danger'}">
+                        ${f.status.toUpperCase()}
+                      </span>
+                    </td>
+                    <td style="text-align:right;">
+                      <button class="btn btn-sm ${f.status === 'paid' ? 'btn-ghost text-muted' : 'btn-primary'} btn-toggle-fee" data-id="${f.id}" data-status="${f.status}">
+                        ${f.status === 'paid' ? 'Mark unpaid' : 'Mark paid'}
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+        document.getElementById('filter-fee-type')?.addEventListener('change', (e) => {
+          typeFilter = e.target.value;
+          render();
+        });
+
+        document.getElementById('filter-fee-status')?.addEventListener('change', (e) => {
+          statusFilter = e.target.value;
+          render();
+        });
+
+        document.querySelectorAll('.btn-toggle-fee').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.getAttribute('data-id');
+            const current = e.target.getAttribute('data-status');
+            const next = current === 'paid' ? 'unpaid' : 'paid';
+            adminApi.setFeeStatus(id, next, 'Manual ops reconciliation update');
+            render();
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

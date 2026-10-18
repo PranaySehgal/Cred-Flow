@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Completed Loans — Lender Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar print-hide" id="lender-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile print-hide" id="lender-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="lender-completed-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { lenderApi } from '../js/api.js';
+    import { formatMoney, formatDate } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('lender', '../login.html');
+    if (session) {
+      setupNav('lender', 'completed');
+      loadCompleted();
+    }
+
+    function loadCompleted() {
+      const lenderId = session.lenderId || 'l1';
+      const rows = lenderApi.getCompleted(lenderId);
+
+      const container = document.getElementById('lender-completed-content');
+      container.innerHTML = `
+        <div class="page-header">
+          <div>
+            <h1 class="page-title text-2xl">Completed Loans Archive</h1>
+            <p class="page-subtitle">Agreements that have fully paid down to zero balance</p>
+          </div>
+          <span class="badge badge-success text-sm">
+            ${rows.length} loans completed
+          </span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Agreement ID</th>
+                <th>Shop & Owner</th>
+                <th>Disbursed Facility</th>
+                <th>Started Date</th>
+                <th>Completion Date</th>
+                <th>Status</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length === 0 ? `
+                <tr>
+                  <td colspan="7" class="text-center text-muted" style="padding:2.5rem 1rem;">
+                    No completed agreements recorded yet.
+                  </td>
+                </tr>
+              ` : rows.map(r => `
+                <tr>
+                  <td class="font-bold tabular text-navy">${r.agreement.id}</td>
+                  <td>
+                    <p class="font-semibold text-navy text-sm">${r.merchant.name}</p>
+                    <p class="text-xs text-muted">${r.merchant.ownerName} · ${r.merchant.city}</p>
+                  </td>
+                  <td class="font-bold tabular">${formatMoney(r.agreement.creditAmount)}</td>
+                  <td class="tabular text-muted">${formatDate(r.agreement.startDate)}</td>
+                  <td class="tabular font-semibold text-success">${r.agreement.completedDate ? formatDate(r.agreement.completedDate) : 'Recently completed'}</td>
+                  <td>
+                    <span class="badge badge-success">Fully Repaid</span>
+                  </td>
+                  <td style="text-align:right;">
+                    <a href="agreement.html?id=${r.merchant.id}" class="btn btn-outline btn-sm">
+                      ${icon('fileSignature', { size: 14 })} Agreement
+                    </a>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>

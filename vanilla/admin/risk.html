@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Risk Monitor — Admin Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div class="portal-layout">
+    <aside class="portal-sidebar light print-hide" id="admin-sidebar"></aside>
+
+    <div class="portal-main">
+      <div class="portal-topbar-mobile light print-hide" id="admin-mobile-topbar"></div>
+
+      <main class="container-wide" style="padding-top: 1.5rem; padding-bottom: 3rem;">
+        <div class="cf-fade" id="admin-risk-content">
+          <!-- Loaded dynamically -->
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { adminApi } from '../js/api.js';
+    import { relativeFromNow } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('admin', '../login.html');
+    if (session) {
+      setupNav('admin', 'risk');
+      loadRiskFlags();
+    }
+
+    function loadRiskFlags() {
+      const container = document.getElementById('admin-risk-content');
+
+      function render() {
+        const flags = adminApi.getRiskFlags();
+
+        const severityBadge = {
+          high: 'badge-danger',
+          medium: 'badge-amber',
+          low: 'badge-teal',
+        };
+
+        container.innerHTML = `
+          <div class="page-header">
+            <div>
+              <h1 class="page-title text-2xl">System Risk Monitor</h1>
+              <p class="page-subtitle">Platform-wide alert flags, default probability surveillance and field follow-ups</p>
+            </div>
+            <span class="badge ${flags.length > 0 ? 'badge-danger' : 'badge-success'}">
+              ${flags.length} active risk flags
+            </span>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:0.85rem;">
+            ${flags.length === 0 ? `
+              <div class="card card-content text-center text-muted" style="padding:3rem 1rem;">
+                No unresolved risk flags across the platform.
+              </div>
+            ` : flags.map(r => `
+              <div class="card card-content flex justify-between items-start gap-4" style="${r.severity === 'high' ? 'border-left: 4px solid var(--color-danger);' : ''}">
+                <div style="flex:1;">
+                  <div class="flex items-center gap-2">
+                    <span class="badge ${severityBadge[r.severity] || 'badge-neutral'} uppercase-tracking">
+                      ${r.severity} severity
+                    </span>
+                    <span class="badge badge-neutral">${r.type.replace('_', ' ')}</span>
+                    <span class="text-xs text-muted tabular">${relativeFromNow(r.createdAt)}</span>
+                  </div>
+
+                  <h3 class="text-base font-bold text-navy" style="margin: 0.5rem 0 0.2rem;">
+                    ${r.merchantName} · Agreement ${r.agreementId}
+                  </h3>
+                  <p class="text-xs text-muted">
+                    ${r.daysSinceLastPayment > 0 ? `Inactivity: ${r.daysSinceLastPayment} days since last routed payment.` : 'Underperforming pace.'}
+                    ${r.note ? ` Note: ${r.note}` : ''}
+                  </p>
+                </div>
+
+                <div class="flex items-center gap-2" style="flex-wrap:wrap; justify-content:flex-end;">
+                  <button class="btn btn-outline btn-sm btn-assign" data-id="${r.id}" data-merchant="${r.merchantName}">
+                    Assign Follow-up
+                  </button>
+                  <button class="btn btn-primary btn-sm btn-resolve" data-id="${r.id}" data-merchant="${r.merchantName}">
+                    Resolve Flag
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        document.querySelectorAll('.btn-assign').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.getAttribute('data-id');
+            const merchant = e.target.getAttribute('data-merchant');
+            const agent = prompt(`Assign field follow-up for ${merchant} to agent:`, 'Vikram Yadav');
+            if (agent) {
+              adminApi.assignFollowUp(id, agent.trim());
+              alert(`Follow-up assigned to ${agent}.`);
+              render();
+            }
+          });
+        });
+
+        document.querySelectorAll('.btn-resolve').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = e.target.getAttribute('data-id');
+            const merchant = e.target.getAttribute('data-merchant');
+            const note = prompt(`Resolution note for ${merchant}:`, 'Payment confirmed by bank screenshot.');
+            if (note) {
+              adminApi.resolveRisk(id, note.trim());
+              alert('Risk flag resolved and removed from monitor.');
+              render();
+            }
+          });
+        });
+      }
+
+      render();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credit Line Details — Merchant Portal</title>
+  <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+
+  <div id="merchant-header"></div>
+
+  <main class="container-narrow merchant-main-content" style="padding-top: 1.25rem; padding-bottom: 2rem;">
+    <div class="cf-fade" id="merchant-credit-content">
+      <!-- Credit details -->
+    </div>
+  </main>
+
+  <script type="module">
+    import { requireRole } from '../js/session.js';
+    import { setupNav } from '../js/nav.js';
+    import { merchantApi } from '../js/api.js';
+    import { formatMoney } from '../js/format.js';
+    import { icon } from '../js/icons.js';
+
+    const session = requireRole('merchant', '../login.html');
+    if (session) {
+      setupNav('merchant', 'more');
+      loadCredit();
+    }
+
+    function loadCredit() {
+      const merchantId = session.merchantId || 'm1';
+      const { agreement, merchant, lender } = merchantApi.getAgreement(merchantId);
+      const repaid = agreement.creditAmount - agreement.outstanding;
+      const percent = ((repaid / agreement.creditAmount) * 100).toFixed(0);
+
+      const container = document.getElementById('merchant-credit-content');
+      container.innerHTML = `
+        <div class="flex items-center gap-2" style="margin-bottom: 1.25rem;">
+          <a href="more.html" class="btn btn-ghost btn-sm" style="padding:0.25rem 0.5rem;">
+            ${icon('arrowLeft', { size: 16 })} More
+          </a>
+          <div>
+            <h1 class="text-xl text-navy">Credit line & terms</h1>
+            <p class="text-xs text-muted">Agreement ${agreement.id}</p>
+          </div>
+        </div>
+
+        <div class="card card-content" style="margin-bottom: 1.25rem;">
+          <p class="stat-label">Outstanding Balance</p>
+          <div class="flex items-baseline gap-2" style="margin-top: 4px;">
+            <span class="stat-value text-3xl tabular text-navy">${formatMoney(agreement.outstanding)}</span>
+            <span class="text-sm text-muted">left to repay</span>
+          </div>
+          <div style="margin-top: 1rem;">
+            <div class="progress-bar">
+              <div class="progress-fill teal" style="width: ${percent}%;"></div>
+            </div>
+            <div class="flex justify-between text-xs text-muted" style="margin-top:6px;">
+              <span>${formatMoney(repaid)} repaid (${percent}%)</span>
+              <span>Total: ${formatMoney(agreement.creditAmount)}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Agreement Parameters Card -->
+        <div class="card card-content" style="margin-bottom: 1.25rem;">
+          <h2 class="card-title" style="margin-bottom: 1rem;">Repayment terms</h2>
+          <div style="display:flex; flex-direction:column; gap:0.6rem;">
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Settlement split rate:</span>
+              <span class="font-bold text-navy">${(agreement.rate * 100).toFixed(0)}% of every sale</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Disbursed on:</span>
+              <span class="font-semibold text-ink">${agreement.disbursedDate}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Repayment target date:</span>
+              <span class="font-semibold text-ink">${agreement.endDate}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Min daily floor:</span>
+              <span class="font-semibold text-ink">${formatMoney(agreement.minDailyFloor)}</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Grace days allowed:</span>
+              <span class="font-semibold text-ink">${agreement.graceDays} days</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+              <span class="text-muted">Routing status:</span>
+              <span class="badge ${agreement.paused ? 'badge-amber' : 'badge-success'}">
+                ${agreement.paused ? 'Paused' : 'Active'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lender Card -->
+        <div class="card card-content" style="margin-bottom: 1.25rem;">
+          <h2 class="card-title" style="margin-bottom: 0.75rem;">Credit Provider</h2>
+          <div class="flex items-center gap-3">
+            <span style="background:var(--color-tint-navy); color:var(--color-navy); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:18px;">🚚</span>
+            <div>
+              <p class="font-semibold text-sm text-navy">${lender.name}</p>
+              <p class="text-xs text-muted">${lender.contactPerson} · ${lender.city}</p>
+              <p class="text-xs text-teal font-medium">Phone: +91 ${lender.phone}</p>
+            </div>
+          </div>
+        </div>
+
+        <a href="agreement.html" class="btn btn-outline btn-block">
+          ${icon('fileSignature', { size: 16 })} View formal agreement document
+        </a>
+      `;
+    }
+  </script>
+</body>
+</html>

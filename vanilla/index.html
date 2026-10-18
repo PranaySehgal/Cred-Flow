@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CreditFlow — Backend-connected account portals</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .hero-glow {
+      position: absolute;
+      top: -120px;
+      left: 0;
+      right: 0;
+      height: 480px;
+      background: radial-gradient(600px 300px at 20% 40%, rgba(10,74,92,0.10), transparent 70%), radial-gradient(520px 260px at 80% 10%, rgba(245,166,35,0.14), transparent 70%);
+      pointer-events: none;
+    }
+    .landing-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(247, 248, 250, 0.88);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--color-line);
+      height: 64px;
+      display: flex;
+      align-items: center;
+    }
+    .split-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-card);
+      padding: 1.5rem;
+      box-shadow: 0 18px 45px -24px rgba(13, 43, 69, 0.25);
+    }
+    .faq-item {
+      border-bottom: 1px solid var(--color-line);
+    }
+    .faq-item summary {
+      padding: 1.25rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      list-style: none;
+      font-size: 14px;
+      color: var(--color-navy);
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item[open] summary svg { transform: rotate(180deg); }
+    .faq-body {
+      padding: 0 1.25rem 1.25rem;
+      font-size: 13.5px;
+      color: var(--color-muted);
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Landing Nav -->
+  <header class="landing-nav">
+    <div class="container flex items-center justify-between">
+      <a href="index.html" class="logo-link" aria-label="CreditFlow">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none">
+          <rect width="32" height="32" rx="8" fill="#f5a623"/>
+          <path d="M10 22V10L22 22V10" stroke="#0d2b45" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span style="font-weight:700; font-size:19px; letter-spacing:-0.03em; color:var(--color-navy);">
+          Credit<span style="color:#f5a623">Flow</span>
+        </span>
+      </a>
+
+      <nav class="flex items-center gap-6" style="display:none;" id="desktop-nav">
+        <a href="#how-it-works" class="text-muted hover:text-navy text-sm font-medium">How it works</a>
+        <a href="#merchant" class="text-muted hover:text-navy text-sm font-medium">For merchants</a>
+        <a href="#lender" class="text-muted hover:text-navy text-sm font-medium">For lenders</a>
+        <a href="#security" class="text-muted hover:text-navy text-sm font-medium">Security</a>
+        <a href="#faq" class="text-muted hover:text-navy text-sm font-medium">FAQ</a>
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <a href="login.html" class="btn btn-ghost btn-sm" id="auth-link">Sign in</a>
+        <a href="login.html" class="btn btn-amber btn-sm">Open portal &rarr;</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section style="position:relative; overflow:hidden; padding: 4rem 0 5rem;">
+    <div class="hero-glow"></div>
+    <div class="container grid-2 items-center" style="position:relative; gap: 3.5rem;">
+      <div>
+        <span class="badge badge-amber text-xs font-semibold" style="padding: 0.35rem 0.75rem; margin-bottom: 1.25rem;">
+          ✨ Built for the shop-floor, not the boardroom
+        </span>
+        <h1 class="text-4xl text-navy" style="line-height:1.12; margin-bottom: 1.25rem;">
+          CreditFlow<br>account records.
+        </h1>
+        <p class="text-lg text-muted" style="line-height:1.6; margin-bottom: 2rem; max-width: 500px;">
+          Merchants and lenders can review and update contract, transaction, and issue records backed by the CreditFlow API. This portal records data; it does not initiate payments or settlement.
+        </p>
+
+        <div class="flex items-center gap-3" style="flex-wrap: wrap; margin-bottom: 1.75rem;">
+          <a href="login.html" class="btn btn-amber btn-lg">
+            Sign in to your account &rarr;
+          </a>
+          <a href="#how-it-works" class="btn btn-outline btn-lg">
+            See how it works
+          </a>
+        </div>
+
+        <ul class="flex items-center gap-4 text-xs text-muted" style="flex-wrap:wrap; list-style:none;">
+          <li class="flex items-center gap-1.5"><span class="text-success font-bold">✓</span> Account-based sign-in</li>
+          <li class="flex items-center gap-1.5"><span class="text-success font-bold">✓</span> Backend-backed records</li>
+          <li class="flex items-center gap-1.5"><span class="text-success font-bold">✓</span> Merchant and lender portals</li>
+        </ul>
+      </div>
+
+      <!-- Connected account preview -->
+      <div>
+        <div class="split-card">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="stat-label">Merchant account</p>
+              <p class="stat-value text-3xl" style="margin-top:4px;">Live data</p>
+            </div>
+            <span class="badge badge-success text-xs">Backend connected</span>
+          </div>
+
+          <div style="margin-top: 1.5rem;">
+            <div class="flex justify-between text-xs text-muted font-medium" style="margin-bottom:6px;">
+              <span>Account information</span>
+              <span>Fetched on sign in</span>
+            </div>
+            <div style="height:10px; border-radius:9999px; background:linear-gradient(90deg,var(--color-teal),var(--color-navy));"></div>
+          </div>
+
+          <div style="border-top:1px solid var(--color-line); margin-top:1.25rem; padding-top:1rem; display:flex; flex-direction:column; gap:0.75rem;">
+            <div class="flex justify-between text-xs font-medium">
+              <span>Transactions</span>
+              <span class="text-teal font-semibold">From your account</span>
+            </div>
+            <div class="flex justify-between text-xs font-medium">
+              <span>Contracts</span>
+              <span class="text-navy font-semibold">From your account</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:12px; padding:1.2rem;">
+          <div class="flex justify-between items-center text-xs">
+            <span class="stat-label">Merchant & lender portals</span>
+            <span class="badge badge-amber">Account-based</span>
+          </div>
+          <p class="font-semibold text-sm" style="margin-top:8px;">Sign in to view your backend records</p>
+          <p class="text-xs text-muted" style="margin-top:8px;">No example account numbers or transaction totals are shown.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Facts Strip -->
+  <section style="background:var(--color-surface); border-top:1px solid var(--color-line); border-bottom:1px solid var(--color-line); padding: 2rem 0;">
+    <div class="container grid-4 text-center">
+      <div>
+        <p class="text-2xl font-bold text-navy">2 portals</p>
+        <p class="text-xs text-muted">Merchant and lender accounts</p>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-navy">Records</p>
+        <p class="text-xs text-muted">Transactions and contracts</p>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-navy">2 portals</p>
+        <p class="text-xs text-muted">Merchant and lender</p>
+      </div>
+      <div>
+        <p class="text-2xl font-bold text-navy">Live</p>
+        <p class="text-xs text-muted">Account-specific backend data</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" style="padding: 5rem 0;">
+    <div class="container">
+      <div style="max-width: 620px; margin-bottom: 3rem;">
+        <p class="uppercase-tracking text-teal">How it works</p>
+        <h2 class="text-3xl text-navy" style="margin: 0.5rem 0 1rem;">Sign in, manage contracts, record transactions.</h2>
+        <p class="text-base text-muted">The connected portals read and write account records through the backend API.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card card-content">
+          <div class="flex justify-between items-center">
+            <span style="background:var(--color-tint-navy); color:var(--color-navy); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:20px;">📱</span>
+            <span class="text-2xl font-bold text-muted tabular">01</span>
+          </div>
+          <h3 class="text-lg text-navy" style="margin: 1rem 0 0.5rem;">Sign in with your account</h3>
+          <p class="text-sm text-muted">Use your backend username and password. Merchant and lender accounts are supported.</p>
+          <p class="text-xs text-teal font-semibold uppercase-tracking" style="margin-top:1.25rem;">Backend authentication</p>
+        </div>
+
+        <div class="card card-content">
+          <div class="flex justify-between items-center">
+            <span style="background:var(--color-tint-teal); color:var(--color-teal); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:20px;">📝</span>
+            <span class="text-2xl font-bold text-muted tabular">02</span>
+          </div>
+          <h3 class="text-lg text-navy" style="margin: 1rem 0 0.5rem;">Create and track contracts</h3>
+          <p class="text-sm text-muted">Lenders can create contracts with a merchant account, amount, and tenure. Both account views read saved contract balances.</p>
+          <p class="text-xs text-teal font-semibold uppercase-tracking" style="margin-top:1.25rem;">Stored by the backend</p>
+        </div>
+
+        <div class="card card-content">
+          <div class="flex justify-between items-center">
+            <span style="background:var(--color-tint-amber); color:var(--color-amber-ink); width:40px; height:40px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; font-size:20px;">⚡</span>
+            <span class="text-2xl font-bold text-muted tabular">03</span>
+          </div>
+          <h3 class="text-lg text-navy" style="margin: 1rem 0 0.5rem;">Record transactions and repayments</h3>
+          <p class="text-sm text-muted">Merchants can record transactions; lenders can record contract repayments. These actions update backend records and do not move money.</p>
+          <p class="text-xs text-teal font-semibold uppercase-tracking" style="margin-top:1.25rem;">Persisted to your account</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Connected Portals -->
+  <section style="background:var(--color-surface); border-top:1px solid var(--color-line); border-bottom:1px solid var(--color-line); padding: 5rem 0;">
+    <div class="container">
+      <div class="flex items-center justify-between" style="flex-wrap:wrap; gap:1.5rem; margin-bottom: 2.5rem;">
+        <div style="max-width: 560px;">
+          <p class="uppercase-tracking text-teal">One API, two portals</p>
+          <h2 class="text-3xl text-navy" style="margin: 0.5rem 0 0.75rem;">Account data from the backend.</h2>
+          <p class="text-base text-muted">Merchant and lender views display contract and transaction records returned for the signed-in account.</p>
+        </div>
+        <a href="login.html" class="btn btn-outline">Sign in &rarr;</a>
+      </div>
+
+      <div class="grid-2">
+        <div class="card card-content flex flex-col justify-between" style="background:var(--color-canvas);">
+          <div>
+            <div class="flex items-center gap-3">
+              <span class="badge badge-teal" style="padding:6px; font-size:16px;">🏪</span>
+              <div>
+                <p class="font-semibold text-base text-navy">Merchant</p>
+                <p class="text-xs text-muted">The shop</p>
+              </div>
+            </div>
+            <p class="text-sm text-muted" style="margin: 1rem 0;">Views saved contracts and transactions, records a transaction, and submits support issues.</p>
+            <ul style="list-style:none; font-size:13px; display:flex; flex-direction:column; gap:8px;">
+              <li><span class="text-success font-bold">✓</span> Contract balances</li>
+              <li><span class="text-success font-bold">✓</span> Transaction records</li>
+              <li><span class="text-success font-bold">✓</span> Support issues</li>
+            </ul>
+          </div>
+          <a href="login.html" class="text-teal font-semibold text-xs" style="margin-top:1.5rem; display:inline-block;">Open merchant portal &rarr;</a>
+        </div>
+
+        <div class="card card-content flex flex-col justify-between" style="background:var(--color-canvas);">
+          <div>
+            <div class="flex items-center gap-3">
+              <span class="badge badge-navy" style="padding:6px; font-size:16px;">🚚</span>
+              <div>
+                <p class="font-semibold text-base text-navy">Lender</p>
+                <p class="text-xs text-muted">The credit provider</p>
+              </div>
+            </div>
+            <p class="text-sm text-muted" style="margin: 1rem 0;">Views contracts and recorded payments, creates a contract, and updates repayment records.</p>
+            <ul style="list-style:none; font-size:13px; display:flex; flex-direction:column; gap:8px;">
+              <li><span class="text-success font-bold">✓</span> Contract totals</li>
+              <li><span class="text-success font-bold">✓</span> Merchant account records</li>
+              <li><span class="text-success font-bold">✓</span> Repayment updates</li>
+            </ul>
+          </div>
+          <a href="login.html" class="text-teal font-semibold text-xs" style="margin-top:1.5rem; display:inline-block;">Open lender portal &rarr;</a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Security -->
+  <section id="security" style="background:var(--color-navy); color:#ffffff; padding: 5rem 0;">
+    <div class="container">
+      <div style="max-width: 620px; margin-bottom: 3rem;">
+        <p class="uppercase-tracking text-amber">Backend-connected records</p>
+        <h2 class="text-3xl text-white" style="margin: 0.5rem 0 1rem;">Your account views reflect saved backend data.</h2>
+        <p class="text-base" style="color:rgba(255,255,255,0.7);">The web portal authenticates against the backend and reads or writes transaction, contract, and issue records for the signed-in account.</p>
+      </div>
+
+      <div class="grid-2" style="gap:2.5rem;">
+        <div>
+          <h3 class="text-lg text-white" style="margin-bottom:0.4rem;">🔒 Credential sign-in</h3>
+          <p class="text-sm" style="color:rgba(255,255,255,0.65);">Merchant and lender users sign in with account credentials checked by the backend.</p>
+        </div>
+        <div>
+          <h3 class="text-lg text-white" style="margin-bottom:0.4rem;">✅ Contract records</h3>
+          <p class="text-sm" style="color:rgba(255,255,255,0.65);">Lenders can create contracts with a merchant account ID, amount, and tenure.</p>
+        </div>
+        <div>
+          <h3 class="text-lg text-white" style="margin-bottom:0.4rem;">⏱️ Persistent transactions</h3>
+          <p class="text-sm" style="color:rgba(255,255,255,0.65);">Merchant transaction submissions are stored through the backend API.</p>
+        </div>
+        <div>
+          <h3 class="text-lg text-white" style="margin-bottom:0.4rem;">👛 No simulated balances</h3>
+          <p class="text-sm" style="color:rgba(255,255,255,0.65);">The portals do not fill missing records with sample accounts or transaction totals.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" style="padding: 5rem 0;">
+    <div class="container" style="max-width:840px;">
+      <div class="text-center" style="margin-bottom: 2.5rem;">
+        <p class="uppercase-tracking text-teal">FAQ</p>
+        <h2 class="text-3xl text-navy" style="margin-top:0.5rem;">Common questions</h2>
+      </div>
+
+      <div class="card" style="overflow:hidden;">
+        <details class="faq-item">
+          <summary>Is CreditFlow a lender or a wallet? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="faq-body">This web portal records and displays merchant and lender account information. It does not transfer funds or split payment settlements.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Does the shop need a new QR code? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="faq-body">The current web portal does not manage or issue QR codes. Sign in to view the contract and transaction features connected to the backend.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Does the portal process payments? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="faq-body">No. Merchant transaction records and lender repayment updates are saved to the backend, but the portal does not initiate or settle payments.</div>
+        </details>
+        <details class="faq-item">
+          <summary>Is this connected to real money or Truecaller? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="faq-body">The portals read account, contract and transaction records from the connected backend. Recording a transaction stores it in the backend; it does not initiate a payment or settlement.</div>
+        </details>
+        <details class="faq-item" style="border-bottom:none;">
+          <summary>How do I access a portal? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+          <div class="faq-body">Sign in with your backend username and password, then choose Merchant or Lender to open the matching account.</div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section style="padding: 0 0 5rem;">
+    <div class="container">
+      <div class="card card-content flex justify-between items-center" style="padding: 2.5rem; flex-wrap:wrap; gap:1.5rem;">
+        <div>
+          <h2 class="text-2xl text-navy">Open your merchant or lender portal.</h2>
+          <p class="text-sm text-muted" style="margin-top:0.4rem;">Sign in with an account registered in the connected backend.</p>
+        </div>
+        <a href="login.html" class="btn btn-amber btn-lg">Sign in &rarr;</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer style="background:var(--color-surface); border-top:1px solid var(--color-line); padding: 2.5rem 0;">
+    <div class="container flex justify-between items-center" style="flex-wrap:wrap; gap:1.5rem;">
+      <div>
+        <p class="font-bold text-navy" style="font-size:16px;">CreditFlow</p>
+        <p class="text-xs text-muted" style="margin-top:4px;">CreditFlow provides merchant and lender account views backed by the connected API.</p>
+      </div>
+      <div class="flex items-center gap-5 text-xs text-muted">
+        <a href="login.html" class="hover:text-navy">Sign in</a>
+        <a href="#how-it-works" class="hover:text-navy">How it works</a>
+        <span>© 2026 CreditFlow</span>
+      </div>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { getSession } from './js/session.js';
+    if (window.innerWidth >= 1024) {
+      document.getElementById('desktop-nav').style.display = 'flex';
+    }
+    const session = getSession();
+    if (session && session.role) {
+      const authLink = document.getElementById('auth-link');
+      if (authLink) {
+        authLink.textContent = 'Dashboard';
+        authLink.href = session.role === 'merchant' ? 'merchant/index.html' : session.role === 'lender' ? 'lender/index.html' : 'admin/index.html';
+      }
+    }
+  </script>
+</body>
+</html>
