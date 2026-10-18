@@ -1,0 +1,11 @@
+node_modules
+dist
+shots
+creditflow-source.zip
+.pwdeps
+*.log
+*.pid
+*.deb
+.env
+.env.*
+!.env.example
